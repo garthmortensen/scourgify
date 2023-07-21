@@ -22,38 +22,18 @@ def get_pyscript_dir() -> str:
 
     return pyscript_dir
 
-scourgify_dir = get_pyscript_dir()
-scourgify_path = os.path.join(scourgify_dir, "scourgify.py")
-
-def execute_command(command, the_library):
-    """where
-    - check = if command fails (exits with a non-zero status code), raises CalledProcessError exception.
-    which provides info about the command that failed, exit status, and any output.
-    - text = ensures captured output and error streams return as strings.
-    """
-
-    print(f"\n~~~Scourgify {the_library}~~~")
-    result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = result.communicate()
-    if stdout:
-        print(f"{the_library} stdout:\n{stdout}")
-    if stderr:
-        print(f"{the_library} stderr:\n{stderr}")
-
-# if no such files, there's no need to use related functionality
-dir_contains_py = any(filtered_files.get("python"))
-print(f"dir_contains_py: {dir_contains_py}")
-
-dir_contains_r = any(filtered_files.get("r"))
-print(f"dir_contains_r: {dir_contains_r}")
-
 
 def get_wanted_files_in_pwd():
     """these are files which can be formatted with black or styler."""
 
     extensions = {
-    "python": [".py",],
-    "r": [".R", ".Rmd",],
+        "python": [
+            ".py",
+        ],
+        "r": [
+            ".R",
+            ".Rmd",
+        ],
     }
 
     filtered_files = {
@@ -73,15 +53,16 @@ def get_wanted_files_in_pwd():
                 if pwd_file.endswith(extension):
                     print(f"script found: {pwd_file}")
                     file_path = os.path.join(pwd, pwd_file)
-                    filtered_files[lang].append({
-                        "file_path": file_path,
-                    })
+                    filtered_files[lang].append(
+                        {
+                            "file_path": file_path,
+                        }
+                    )
 
     return filtered_files
 
-filtered_files = get_wanted_files_in_pwd()
 
-def check_pytest_tests_exist():
+def check_pytest_dir_exist():
     """Determine if the present working directory contains a subdir called 'test', and if it contains 'test_*.py' files (for pytest)."""
     pwd = os.getcwd()
     test_path_py = os.path.join(pwd, "test")
@@ -97,7 +78,7 @@ def check_pytest_tests_exist():
     return False
 
 
-def check_testthat_tests_exist():
+def check_testthat_dir_exist():
     """Determine if the present working directory contains a subdir called 'tests', and if it contains 'test_*.r' files (for testthat)."""
     pwd = os.getcwd()
     test_path_r = os.path.join(pwd, "tests")
@@ -112,23 +93,88 @@ def check_testthat_tests_exist():
         print("No subdir 'tests/' or no test_*.r files exist.")
     return False
 
-testthat_tests_exist = check_testthat_tests_exist()
-print(f"testthat_tests_exist: {testthat_tests_exist}")
 
 def check_git_dir_exists():
-    """this isnt so smart. if you run this on any code dir, what are chances it actually contains git? you may run on subdir"""
+    """TODO: update function to check if git can run in dir, indicating version control
+    check if relevant files have already been committed before running
+    otherwise, print warning and prompt to proceed with formatting"""
+
+    print(
+        "Styler authors recommend version controlling your script before reformatting, so please commit before proceeding."
+    )
+
     pwd = os.getcwd()
     git_path = os.path.join(pwd, ".git")
 
+    git_dir_exists = False
     if os.path.exists(git_path) and os.path.isdir(git_path):
-        return True
-    else:
-        return False
-
-has_git_folder = check_git_dir_exists()
-# print(has_git_folder)
+        git_dir_exists = True
+    return git_dir_exists
 
 
+def get_git_status_porcelain_output():
+    print(1)
+
+
+the_library = "porcelain"
+command = ["git", "status", "--porcelain=1"]
+result = subprocess.Popen(
+    command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+)
+stdout, stderr = result.communicate()
+if stdout:
+    print(f"{the_library} stdout:\n{stdout}")
+    # ' M README.md\n M scourgify.py\n'
+    stdout_lines = stdout.split("\n")
+    for stdout_line in stdout_lines[:-1]:  # trim out last line due to \n in stdout output
+        # requirement: no spaces in filenames
+        # element_in_line = stdout_line.split(" ")
+        # print(element_in_line)
+        # TODO: split on length???
+        git_file_status = stdout_line[:2].strip()
+        git_file_name = stdout_line[3:].strip()
+        print(f"git_file_status: {git_file_status}")
+        print(f"git_file_name: {git_file_name}")
+
+
+if stderr:
+    print(f"{the_library} stderr:\n{stderr}")
+
+
+git_dir_exists = check_git_dir_exists()
+print(f"git_dir_exists: {git_dir_exists}")
+
+
+def execute_command(command, the_library):
+    """where
+    - check = if command fails (exits with a non-zero status code), raises CalledProcessError exception.
+    which provides info about the command that failed, exit status, and any output.
+    - text = ensures captured output and error streams return as strings.
+    """
+
+    print(f"\n~~~Scourgify {the_library}~~~")
+    result = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    stdout, stderr = result.communicate()
+    if stdout:
+        print(f"{the_library} stdout:\n{stdout}")
+    if stderr:
+        print(f"{the_library} stderr:\n{stderr}")
+
+
+# create root for relative links ("./formattr.R")
+scourgify_dir = get_pyscript_dir()
+scourgify_path = os.path.join(scourgify_dir, "scourgify.py")
+
+# if no .py/.r files, there's no need to run formatters
+filtered_files = get_wanted_files_in_pwd()
+
+dir_contains_py = any(filtered_files.get("python"))
+print(f"dir_contains_py: {dir_contains_py}")
+
+dir_contains_r = any(filtered_files.get("r"))
+print(f"dir_contains_r: {dir_contains_r}")
 
 if dir_contains_py:
     """
@@ -149,7 +195,8 @@ if dir_contains_r:
     command = ["Rscript", formattr_dir, "."]
     execute_command(command, the_library)
 
-pytest_tests_exist = check_pytest_tests_exist()
+# avoid unwanted terminal output by first checking if pytest files exist
+pytest_tests_exist = check_pytest_dir_exist()
 print(f"pytest_tests_exist: {pytest_tests_exist}")
 if pytest_tests_exist:
     # run pytest tests
@@ -157,7 +204,10 @@ if pytest_tests_exist:
     command = ["pytest", "."]
     execute_command(command, the_library)
 
-if testthat_tests_exist:
+# avoid unwanted terminal output by first checking if testthat files exist
+testthat_dir_exist = check_testthat_dir_exist()
+print(f"testthat_dir_exist: {testthat_dir_exist}")
+if testthat_dir_exist:
     # run testthat tests
     the_library = "testthat"
     command = ["Rscript", "-e", 'library(testthat); test_dir(".")']
