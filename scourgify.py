@@ -97,7 +97,7 @@ def check_for_uncommitted_scripts():
     As such, check to see if any uncommitted .py or .r files exist.
     If so, do not run formatters.
 
-    TODO: handle if no git, error:
+e    TODO: handle if no git, error:
     $ git status --porcelain
     fatal: not a git repository (or any of the parent directories): .git
     """
