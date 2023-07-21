@@ -1,10 +1,8 @@
 import os
 import subprocess
 
-# add to .bashrc or .bash_profile (gitbash):
-# alias scourgify='python "...\styler\scourgify.py"'
+# TODO: what if .git doesnt exist?
 
-# source: https://ascii.co.uk/art/wizard
 ascii_banner = r"""
    (\.   .      ,/)
     \(   |\     )/
@@ -94,56 +92,68 @@ def check_testthat_dir_exist():
     return False
 
 
-def check_git_dir_exists():
-    """TODO: update function to check if git can run in dir, indicating version control
-    check if relevant files have already been committed before running
-    otherwise, print warning and prompt to proceed with formatting"""
+def check_for_uncommitted_scripts():
+    """Per styler library authors, you should use version control or backup code.
+    As such, check to see if any uncommitted .py or .r files exist.
+    If so, do not run formatters.
 
-    print(
-        "Styler authors recommend version controlling your script before reformatting, so please commit before proceeding."
+    TODO: handle if no git, error:
+    $ git status --porcelain
+    fatal: not a git repository (or any of the parent directories): .git
+    """
+
+    # git porcelain produces fixed output for parsing. v1 is minimial
+    the_library = "porcelain"
+    command = ["git", "status", "--porcelain=1"]
+    result = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
+    stdout, stderr = result.communicate()
 
-    pwd = os.getcwd()
-    git_path = os.path.join(pwd, ".git")
+    if stdout:
+        # for joining fullpath to uncommited files
+        pwd = os.getcwd()
 
-    git_dir_exists = False
-    if os.path.exists(git_path) and os.path.isdir(git_path):
-        git_dir_exists = True
-    return git_dir_exists
+        uncommitted_scripts = {
+            "python": [],
+            "r": [],
+        }
 
+        print(f"{the_library} stdout:\n{stdout}")
+        # ' M README.md\n M scourgify.py\n'
+        stdout_lines = stdout.split("\n")
+        for stdout_line in stdout_lines[
+            :-1
+        ]:  # trim out last line due to \n in stdout output
+            git_file_status = stdout_line[:2].strip().lower()
+            git_file_name = stdout_line[3:].strip().lower()
 
-def get_git_status_porcelain_output():
-    print(1)
+            # porcelain does not output commited files, but i dont have internet and i dont know what else might show up. #preinternetdays
+            # TODO: does black format .ipynb?
+            if git_file_name.endswith((".py",)):
+                uncommitted_script_file_path = os.path.join(pwd, git_file_name)
+                print("Before running formatter, please commit this script:")
+                print(f"- file: {uncommitted_script_file_path}")
+                print(f"  status: {git_file_status}")
+                uncommitted_scripts["python"].append(uncommitted_script_file_path)
 
+            if git_file_name.endswith(
+                (
+                    ".r",
+                    ".rmd",
+                )
+            ):
+                uncommitted_script_file_path = os.path.join(pwd, git_file_name)
+                print("Before running formatter, please commit this script:")
+                print(f"- file: {uncommitted_script_file_path}")
+                print(f"  status: {git_file_status}")
+                uncommitted_scripts["r"].append(uncommitted_script_file_path)
 
-the_library = "porcelain"
-command = ["git", "status", "--porcelain=1"]
-result = subprocess.Popen(
-    command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-)
-stdout, stderr = result.communicate()
-if stdout:
-    print(f"{the_library} stdout:\n{stdout}")
-    # ' M README.md\n M scourgify.py\n'
-    stdout_lines = stdout.split("\n")
-    for stdout_line in stdout_lines[:-1]:  # trim out last line due to \n in stdout output
-        # requirement: no spaces in filenames
-        # element_in_line = stdout_line.split(" ")
-        # print(element_in_line)
-        # TODO: split on length???
-        git_file_status = stdout_line[:2].strip()
-        git_file_name = stdout_line[3:].strip()
-        print(f"git_file_status: {git_file_status}")
-        print(f"git_file_name: {git_file_name}")
+    if stderr:
+        print(f"{the_library} stderr:\n{stderr}")
+        print("TODO: add error catching for when no git status`")
 
-
-if stderr:
-    print(f"{the_library} stderr:\n{stderr}")
-
-
-git_dir_exists = check_git_dir_exists()
-print(f"git_dir_exists: {git_dir_exists}")
-
+    return uncommitted_scripts
 
 def execute_command(command, the_library):
     """where
@@ -176,7 +186,16 @@ print(f"dir_contains_py: {dir_contains_py}")
 dir_contains_r = any(filtered_files.get("r"))
 print(f"dir_contains_r: {dir_contains_r}")
 
-if dir_contains_py:
+# before formatting, all code should be committed
+uncommitted_scripts = check_for_uncommitted_scripts()
+
+dir_contains_uncommitted_py = any(uncommitted_scripts.get("python"))
+print(f"dir_contains_uncommitted_py: {dir_contains_uncommitted_py}")
+
+dir_contains_uncommitted_r = any(uncommitted_scripts.get("r"))
+print(f"dir_contains_uncommitted_r: {dir_contains_uncommitted_r}")
+
+if dir_contains_py and not dir_contains_uncommitted_py:
     """
     Note on why this command outputs to stderr instead of stdout:
     By writing output to stderr, Black follows a common convention where tools generally print
@@ -188,7 +207,7 @@ if dir_contains_py:
     command = ["black", "."]
     execute_command(command, the_library)
 
-if dir_contains_r:
+if dir_contains_r and not dir_contains_uncommitted_py:
     # r styler reformatter on current dir
     the_library = "styler"
     formattr_dir = os.path.join(scourgify_dir, "formattr.R")
@@ -209,6 +228,7 @@ testthat_dir_exist = check_testthat_dir_exist()
 print(f"testthat_dir_exist: {testthat_dir_exist}")
 if testthat_dir_exist:
     # run testthat tests
+    # TODO: test this functionality
     the_library = "testthat"
     command = ["Rscript", "-e", 'library(testthat); test_dir(".")']
     execute_command(command, the_library)

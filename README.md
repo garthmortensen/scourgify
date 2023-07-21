@@ -1,6 +1,6 @@
 # scourgify
 
-run python and r formatters (black, styler), and tests (pytest, testthat).
+run python and r formatters (black, styler), and tests (pytest, testthat). 
 
 ``` text
    (\.   .      ,/)
