@@ -1,21 +1,12 @@
 # scourgify
 
-run python and r formatters (black, styler), and test frameworks (pytest, testthat). 
+run python and r formatters (black, styler), and test frameworks (pytest, testthat). Does the cleanup work for you.
 
-``` text
-   (\.   .      ,/)
-    \(   |\     )/
-    //\  | \   /\      SCOURGIFY!
-   (/ /\_#oo#_/\ \)
-    \/\  ####  /\/
-         `##'
-         
-Cast this spell to test assert,
-Ensure these errors do avert,
-Clean code, this does convert.
+> Cast this spell to test assert,
+> Ensure these errors do avert,
+> Clean code, this does convert.
 
-ascii source: https://ascii.co.uk/art/wizard
-```
+![wizard](./images/poloroid.png)
 
 ## Usage
 
