@@ -1,6 +1,6 @@
 # scourgify
 
-run python and r formatters (black, styler), and tests (pytest, testthat). 
+run python and r formatters (black, styler), and test frameworks (pytest, testthat). 
 
 ``` text
    (\.   .      ,/)
@@ -22,8 +22,7 @@ ascii source: https://ascii.co.uk/art/wizard
 Install libraries.
 
 ``` bash
-$ pip install black
-$ pip install pytest
+$ pip install black, pytest  # can i comma seperate these?
 
 $ R.exe
 install.packages(c("styler", "testthat"))
@@ -32,6 +31,6 @@ install.packages(c("styler", "testthat"))
 Add this program as an alias to `.bashrc` or `.bash_proflie` so that it can be run via terminal.
 
 ```bash
-alias scourgify='python "...\styler\scourgify.py"'
+alias scourgify='python "/path/to/scourgify/scourgify.py"'
 ```
 
