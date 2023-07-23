@@ -31,11 +31,15 @@ def get_wanted_files_in_pwd():
             ".R",
             ".Rmd",
         ],
+        "sql": [
+            ".sql",
+        ]
     }
 
     filtered_files = {
         "python": [],
         "r": [],
+        "sql" : [],
     }
 
     # determine which files exist in present working directory
@@ -138,6 +142,7 @@ def check_for_uncommitted_scripts():
         "uncommitted_scripts": {
             "python": [],
             "r": [],
+            "sql": [],
         },
         "no_git_repo_found": False,
     }
@@ -154,6 +159,7 @@ def check_for_uncommitted_scripts():
         uncommitted_scripts = {
             "python": [],
             "r": [],
+            "sql": [],
         }
 
         # ' M README.md\n M scourgify.py\n'
@@ -190,7 +196,17 @@ def check_for_uncommitted_scripts():
                 print(f"- file: {uncommitted_script_file_path}")
                 # print(f"  status: {git_file_status}")
                 uncommitted_scripts["r"].append(uncommitted_script_file_path)
-        
+
+            if git_file_name.endswith((".sql",)):
+                uncommitted_script_file_path = os.path.join(pwd, git_file_name)
+                if not script_found:
+                    print("Before running formatter, please commit scripts:")
+                    script_found = True
+                print(f"- file: {uncommitted_script_file_path}")
+                # print(f"  status: {git_file_status}")
+                uncommitted_scripts["sql"].append(uncommitted_script_file_path)
+
+
         uncommitted_scripts_dict["uncommitted_scripts"] = uncommitted_scripts
 
     if stderr:
@@ -203,6 +219,33 @@ def check_for_uncommitted_scripts():
     return uncommitted_scripts_dict
 
 
+# def get_sql_dialect():
+    """user must select the sql dialect"""
+
+    # ordered by stackoverflow dev survey
+    dialects = {
+        1: "mysql",
+        2: "postgres",
+        3: "tsql (ms sql server)",
+        4: "sqlite",
+        5: "oracle",
+    }
+
+    print("select the script's sql dialect:")
+    for num, dialect in dialects.items():
+        print(f"{num}: {dialect}")
+
+    # while True:
+    #     try:
+    # choice = int(input("Input the number: "))
+    choice = 2
+            # if choice in dialects:
+    return dialects[choice]
+        #     else:
+        #         print("Enter a valid number (e.g. 3)")
+        # except ValueError:
+        #     print("Enter a valid number (e.g. 3)")
+
 # create root for relative links ("./formattr.R")
 scourgify_dir = get_pyscript_dir()
 scourgify_path = os.path.join(scourgify_dir, "scourgify.py")
@@ -214,7 +257,8 @@ dir_contains_py = any(filtered_files.get("python"))
 # print(f"dir_contains_py: {dir_contains_py}")
 
 dir_contains_r = any(filtered_files.get("r"))
-# print(f"dir_contains_r: {dir_contains_r}")
+
+dir_contains_sql = any(filtered_files.get("sql"))
 
 # before formatting, all code should be committed
 uncommitted_scripts_dict = check_for_uncommitted_scripts()
@@ -223,16 +267,20 @@ def process_uncommitted_scripts(uncommitted_scripts_dict):
     no_git_repo_found = uncommitted_scripts_dict["no_git_repo_found"]
     uncommitted_scripts_python = bool(uncommitted_scripts_dict["uncommitted_scripts"]["python"])
     uncommitted_scripts_r = bool(uncommitted_scripts_dict["uncommitted_scripts"]["r"])
+    uncommitted_scripts_sql = bool(uncommitted_scripts_dict["uncommitted_scripts"]["sql"])
     
-    return no_git_repo_found, uncommitted_scripts_python, uncommitted_scripts_r
+    return no_git_repo_found, uncommitted_scripts_python, uncommitted_scripts_r, uncommitted_scripts_sql
 
-no_git_repo_found, uncommitted_scripts_python, uncommitted_scripts_r = process_uncommitted_scripts(uncommitted_scripts_dict)
+no_git_repo_found, uncommitted_scripts_python, uncommitted_scripts_r, uncommitted_scripts_sql = process_uncommitted_scripts(uncommitted_scripts_dict)
 
 if not dir_contains_py:
     print("This directory contains no python to format")
 
 if not dir_contains_r:
     print("This directory contains no r to format")
+
+if not dir_contains_sql:
+    print("This directory contains no sql to format")
 
 if dir_contains_py and not uncommitted_scripts_python:
     """
@@ -252,6 +300,22 @@ if dir_contains_r and not uncommitted_scripts_r:
     formattr_dir = os.path.join(scourgify_dir, "formattr.R")
     command = ["Rscript", formattr_dir, "."]
     execute_command(command, the_library)
+
+# if dir_contains_sql and not uncommitted_scripts_sql:
+#     # NOTE: this is setup to run one dialect fix on all .sql files in dir. You cannot specify dialect per file
+#     the_library = "sqlfluff"
+#     print(the_library)
+
+#     # user must specify which dialect to format with, unfortuantely
+#     selected_dialect = get_sql_dialect()
+#     print(f"Selected: {selected_dialect}\n")
+
+#     # check which sql files are in dir
+#     sql_files = filtered_files["sql"]
+#     for sql_file in sql_files:
+#         # sqlfluff fix --dialect=postgres '/.../eeeeee.sql'
+#         command = ["sqlfluff", "fix", f"--dialect={selected_dialect}", f"{sql_file['file_path']}"]  # need to drill down to key
+#         execute_command(command, the_library)
 
 # avoid unwanted terminal output by first checking if pytest files exist
 pytest_tests_exist = check_pytest_dir_exist()
